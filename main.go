@@ -29,12 +29,27 @@ func main() {
 		}
 		return nil
 	}
+	pretty := true
+	indent := "    "
+	rigjtDelim := "}}"
+	leftDelim := "{{"
 	app.Flags = []cli.Flag{
-		cli.BoolFlag{Name: "pretty", Destination: &jade.PrettyOutput, Usage: "pretty print output html"},
-		cli.StringFlag{Name: "indent_str", Destination: &jade.OutputIndent, Usage: "string to use for indenting. use quotes: \"    \" for 4 spaces etc"},
-		cli.StringFlag{Name: "right_delim", Destination: &jade.RightDelim, Usage: "set the start delimiter for output template/html template"},
-		cli.StringFlag{Name: "left_delim", Destination: &jade.LeftDelim, Usage: "set the start delimiter for output template/html template"},
+		cli.BoolFlag{Name: "pretty", Destination: &pretty, Usage: "pretty print output html"},
+		cli.StringFlag{Name: "indent_str", Destination: &indent, Usage: "string to use for indenting. use quotes: \"    \" for 4 spaces etc"},
+		cli.StringFlag{Name: "right_delim", Destination: &rigjtDelim, Usage: "set the start delimiter for output template/html template"},
+		cli.StringFlag{Name: "left_delim", Destination: &leftDelim, Usage: "set the start delimiter for output template/html template"},
 	}
+	jade.PrettyOutput = pretty
+	if indent != "" {
+		jade.OutputIndent = indent
+	}
+	if rigjtDelim != "" {
+		jade.RightDelim = rigjtDelim
+	}
+	if leftDelim != "" {
+		jade.LeftDelim = leftDelim
+	}
+
 	app.Action = handler
 	app.Run(os.Args)
 	return
@@ -61,16 +76,15 @@ func handler(c *cli.Context) error {
 	if strings.HasPrefix(fromPath, pathSep) {
 		prefix = pathSep
 	}
-	log.Printf("FromPath: %v; ToPath: %v", fromPath, toPath)
 	basePath := prefix + strings.Join(npathArr, pathSep)
-	log.Printf("basePath: %v", basePath)
 	var errs []error
 	filepath.Walk(fromPath, filepath.WalkFunc(func(path string, f os.FileInfo, err error) error {
 		if f.IsDir() {
 			return nil
 		}
 		destPath := strings.Replace(path, basePath, toPath, 1)
-		dirName := filepath.Base(destPath)
+		destPath = strings.TrimSuffix(destPath, filepath.Ext(destPath)) + ".html"
+		dirName := filepath.Dir(destPath)
 		if _, err = os.Stat(dirName); os.IsNotExist(err) {
 			err = os.MkdirAll(dirName, 0755)
 			if err != nil {
